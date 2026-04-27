@@ -74,6 +74,9 @@ def build_html(tool_data):
         </div>"""
 
     html_template = f"""
+<!-- Tailwind CSS (必須) -->
+<script src="https://cdn.tailwindcss.com"></script>
+
 <div class="tf-container max-w-2xl mx-auto p-1 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 rounded-3xl shadow-2xl mt-8">
     <div class="bg-white rounded-[1.4rem] p-8 md:p-10">
         <!-- Header -->
