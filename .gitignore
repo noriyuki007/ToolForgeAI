@@ -1,0 +1,14 @@
+# OS files
+.DS_Store
+
+# Environments
+.env
+.dev.vars
+venv/
+node_modules/
+.wrangler/
+
+# Generator outputs
+generator/output/
+generator/__pycache__/
+.dev.vars.rtf

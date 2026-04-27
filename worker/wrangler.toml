@@ -1,0 +1,11 @@
+name = "toolforge-api"
+main = "src/index.js"
+compatibility_date = "2026-04-27"
+
+# We will set the OPENAI_API_KEY as a secret using `wrangler secret put OPENAI_API_KEY`
+# so it is not hardcoded here.
+
+[vars]
+# Put allowed origins here, e.g., "https://your-wordpress-domain.com"
+# For development, we can allow * or localhost
+ALLOWED_ORIGIN = "*"

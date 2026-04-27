@@ -1,0 +1,35 @@
+name: ToolForge AI - Daily Tool Generation
+
+on:
+  schedule:
+    # 毎日UTCの20:00（日本時間の朝5:00）に実行
+    - cron: '0 20 * * *'
+  workflow_dispatch:
+    # 手動実行用
+
+jobs:
+  generate-tool:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          cd generator
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Run Generator Script
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          MAKE_WEBHOOK_URL: ${{ secrets.MAKE_WEBHOOK_URL }}
+        run: |
+          cd generator
+          python main.py
