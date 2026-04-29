@@ -148,6 +148,13 @@ def build_html(tool_data):
         padding: 0.5em 1em;
         border-radius: 0 0.5rem 0.5rem 0;
     }}
+    @media print {{
+        body * {{ visibility: hidden; }}
+        #tf-result-area, #tf-result-area * {{ visibility: visible; }}
+        #tf-result-area {{ position: absolute; left: 0; top: 0; width: 100%; }}
+        #tf-copy-btn, #tf-print-btn, #tf-form-area, .tf-container > div > div:first-child {{ display: none !important; }}
+        .markdown-body {{ font-size: 12pt; }}
+    }}
 </style>
 
 <div class="tf-container max-w-2xl mx-auto p-1 bg-gradient-to-br from-slate-200 via-blue-600 to-slate-400 rounded-3xl shadow-2xl mt-8">
@@ -190,10 +197,17 @@ def build_html(tool_data):
                 </div>
             </div>
             
-            <button id="tf-copy-btn" class="w-full bg-white border-2 border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white font-bold py-3 px-6 rounded-2xl transition-all flex justify-center items-center space-x-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
-                <span>クリップボードにコピー</span>
-            </button>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button id="tf-copy-btn" class="w-full bg-white border-2 border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white font-bold py-3 px-6 rounded-2xl transition-all flex justify-center items-center space-x-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                    <span>クリップボードにコピー</span>
+                </button>
+                
+                <button id="tf-print-btn" class="w-full bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white font-bold py-3 px-6 rounded-2xl transition-all flex justify-center items-center space-x-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                    <span>PDFとして保存（印刷）</span>
+                </button>
+            </div>
 
             <!-- Affiliate Section -->
             <div class="mt-12 overflow-hidden relative p-8 bg-gray-900 rounded-3xl text-white shadow-2xl">
@@ -230,11 +244,18 @@ def build_html(tool_data):
 def build_js(tool_data):
     """Builds the JS string for the tool."""
     
-    # Create the code to extract values
+    # Create the code to extract values and handle local storage
+    restore_values_js = ""
     gather_values_js = ""
     for field in tool_data['fields']:
+        # LocalStorage restore
+        restore_values_js += f"    const el_{field['id']} = document.getElementById('{field['id']}');\n"
+        restore_values_js += f"    if(el_{field['id']} && localStorage.getItem('tf_{field['id']}')) el_{field['id']}.value = localStorage.getItem('tf_{field['id']}');\n"
+        
+        # Gathering and saving
         gather_values_js += f"        const val_{field['id']} = document.getElementById('{field['id']}').value.trim();\n"
         gather_values_js += f"        if (!val_{field['id']}) {{ alert('必須項目を入力してください。'); return; }}\n"
+        gather_values_js += f"        localStorage.setItem('tf_{field['id']}', val_{field['id']});\n"
 
     # Replace the {inputId} in the template with actual string interpolation
     user_prompt_js = tool_data['userPromptTemplate']
@@ -249,8 +270,11 @@ def build_js(tool_data):
     const outputArea = document.getElementById('tf-output');
     const errorArea = document.getElementById('tf-error-area');
     const copyBtn = document.getElementById('tf-copy-btn');
+    const printBtn = document.getElementById('tf-print-btn');
     const WORKER_URL = "{WORKER_URL}"; 
     let lastGeneratedText = "";
+
+{restore_values_js}
 
     generateBtn.addEventListener('click', async () => {{
         resultArea.classList.add('hidden');
@@ -260,6 +284,8 @@ def build_js(tool_data):
         
         const systemPrompt = `{tool_data['systemPrompt']}`;
         const userPrompt = `{user_prompt_js}`;
+
+        if(typeof gtag === 'function') gtag('event', 'generate_tool', {{ tool_title: '{tool_data['title']}' }});
 
         loadingIcon.classList.remove('hidden');
         btnText.textContent = '生成中...';
@@ -294,6 +320,7 @@ def build_js(tool_data):
     }});
 
     copyBtn.addEventListener('click', async () => {{
+        if(typeof gtag === 'function') gtag('event', 'copy_result', {{ tool_title: '{tool_data['title']}' }});
         try {{
             await navigator.clipboard.writeText(lastGeneratedText);
             const originalText = copyBtn.textContent;
@@ -307,6 +334,13 @@ def build_js(tool_data):
             }}, 2000);
         }} catch (err) {{ alert('コピーに失敗しました。'); }}
     }});
+
+    if(printBtn) {{
+        printBtn.addEventListener('click', () => {{
+            if(typeof gtag === 'function') gtag('event', 'print_result', {{ tool_title: '{tool_data['title']}' }});
+            window.print();
+        }});
+    }}
 }})();"""
     return js_template
 
