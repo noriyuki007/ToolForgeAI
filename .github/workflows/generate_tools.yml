@@ -30,6 +30,7 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           MAKE_WEBHOOK_URL: ${{ secrets.MAKE_WEBHOOK_URL }}
+          WORKER_URL: ${{ secrets.WORKER_URL }}
         run: |
           cd generator
           python main.py

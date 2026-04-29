@@ -8,35 +8,50 @@ from dotenv import load_dotenv
 load_dotenv('../worker/.dev.vars')
 
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+WORKER_URL = os.environ.get("WORKER_URL", "http://127.0.0.1:8787")
 
 def generate_tool_concept():
     """Generates a niche AI tool concept and its configuration."""
     print("Generating tool concept...")
     
     prompt = """
-    あなたは天才的なビジネスストラテジストであり、プログラマーです。
-    高単価なアフィリエイト（転職、B2B SaaS、士業、フリーランス案件獲得など、1件1万円〜3万円の報酬）へ自然に誘導できる、
-    「特定の深い悩みをワンクリックで解決する、単一機能の無料AI Webツール」のアイデアを1つ考案してください。
+    あなたは高度な専門性を持つビジネスコンサルタントであり、システムエンジニアです。
+    A8.net、アクセストレード、バリューコマース、afbなどの大手ASPで取り扱われる「高単価なアフィリエイト案件（1件数千円〜数万円）」へ自然に誘導できる、
+    「実務上の具体的な課題を解決し、業務効率を向上させる、単一機能の無料支援ツール」のアイデアを1つ考案してください。
+
+    【推奨する高単価アフィリエイトジャンル（いずれかに合致させること）】
+    1. 転職・キャリアアップ（ITエンジニア転職、ハイクラス転職、フリーランスエージェント）
+    2. B2B SaaS・クラウドツール（会計ソフト、勤怠管理、MAツール、ビジネスチャット）
+    3. 法人向け金融・インフラ（法人用クレジットカード、ビジネスローン、レンタルサーバー、独自ドメイン）
+    4. スキル習得（プログラミングスクール、ビジネス英語コーチング）
+
+    【ツール品質向上のための厳格なルール】
+    1. 汎用的すぎるテーマは避け、極めてニッチで専門性の高いテーマにしてください。ただし、下記はあくまで例です。決して例と全く同じタイトルや内容を出力しないでください。独自に全く新しい斬新なアイデアを考案してください。
+       (例：フリーランス向け 業務委託契約書リスク診断、B2B SaaS導入稟議書 費用対効果算出アシスタント、法人カード還元率シミュレーター、など)
+    2. ツールの入力フォーム（fields）は、必ず「3つから4つ」設けてください。
+    3. 入力フォームのうち、少なくとも1つは必ず「type: select」にし、専門的な選択肢を4つ以上用意してください。
+    4. 「systemPrompt」には、AIの最終出力結果が「Markdown形式（マークダウンのテーブル、見出し、箇条書き）を用いて、非常に構造的かつプロフェッショナルな見た目になるよう」明確に指示を含めてください。
+    5. 出力は必ず「ビジネス・プロフェッショナル」な語彙を使用し、「魔法」「驚異的」「一瞬で」などの誇張表現やカジュアルな言葉は一切排除してください。
 
     以下のJSONフォーマットで厳密に出力してください。他のテキストは一切含めないでください。
 
     {
-        "title": "ツールのタイトル（例：営業マン専用 謝罪メール作成AI）",
-        "description": "ツールの説明文（2〜3行）",
+        "title": "ツールのタイトル（例：フリーランス向け 業務委託契約書リスク診断ツール）",
+        "description": "ツールの説明文（実務的なメリットを専門的かつ簡潔に記述）",
         "fields": [
             {
-                "id": "htmlのinput要素のID",
+                "id": "htmlのinput要素のID (例: contractType)",
                 "label": "フォームのラベル名",
                 "placeholder": "プレースホルダー",
                 "type": "text | select",
-                "options": ["選択肢1", "選択肢2"] // typeがselectの場合のみ
+                "options": ["選択肢1", "選択肢2", "選択肢3", "選択肢4"]
             }
         ],
-        "systemPrompt": "裏側でOpenAI APIに渡すSystem Prompt。プロフェッショナルに徹し、結果のみを出力するように指示してください。",
-        "userPromptTemplate": "ユーザーの入力をどのようにプロンプトに埋め込むかのテンプレート。例: 状況: {input1}\\n相手: {input2}\\nこの条件で謝罪メールを作成してください。",
-        "affiliateTitle": "アフィリエイト誘導エリアのキャッチコピー（例：これ以上クレームで悩みたくない方へ）",
-        "affiliateText": "アフィリエイト誘導エリアの説明文（例：ストレスの少ないルート営業の求人を探してみませんか？）",
-        "affiliateButton": "ボタンのテキスト（例：おすすめの転職エージェントを見る）"
+        "systemPrompt": "OpenAI APIに渡すSystem Prompt。ビジネス実務に即した正確で論理的な回答を、【Markdownの表や見出しを用いた美しい構造】で出力するように強力に指示してください。",
+        "userPromptTemplate": "ユーザーの入力をプロンプトに埋め込むテンプレート。例: 以下の条件でリスク診断をMarkdown形式で作成してください。\\n契約種別: {input1}\\n懸念事項: {input2}",
+        "affiliateTitle": "アフィリエイトエリアのキャッチコピー（例：より高度な契約法務サポートをお求めの方へ）",
+        "affiliateText": "アフィリエイトエリアの説明文（例：ツールの診断結果をもとに、さらに万全な体制を構築するため、フリーランス特化型の専門エージェントや法務SaaSの活用をご検討ください。）",
+        "affiliateButton": "ボタンのテキスト（例：推奨サービスを確認する）"
     }
     """
 
@@ -76,13 +91,25 @@ def build_html(tool_data):
     html_template = f"""
 <!-- Tailwind CSS (必須) -->
 <script src="https://cdn.tailwindcss.com"></script>
+<!-- Google Fonts: Noto Sans JP -->
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
 
-<div class="tf-container max-w-2xl mx-auto p-1 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 rounded-3xl shadow-2xl mt-8">
+<style>
+    body {{ 
+        font-family: 'Noto Sans JP', sans-serif; 
+        font-style: normal !important;
+    }}
+    * {{
+        font-style: normal !important;
+    }}
+</style>
+
+<div class="tf-container max-w-2xl mx-auto p-1 bg-gradient-to-br from-slate-200 via-blue-600 to-slate-400 rounded-3xl shadow-2xl mt-8">
     <div class="bg-white rounded-[1.4rem] p-8 md:p-10">
         <!-- Header -->
         <div class="mb-10 text-center">
-            <div class="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold uppercase tracking-widest rounded-full mb-4">AI Powered Solution</div>
-            <h2 id="tf-title" class="text-3xl md:text-4xl font-black text-gray-900 leading-tight mb-3 italic tracking-tighter">{tool_data['title']}</h2>
+            <div class="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold uppercase tracking-widest rounded-full mb-4">ビジネス実務支援ソリューション</div>
+            <h2 id="tf-title" class="text-3xl md:text-4xl font-black text-gray-900 leading-tight mb-3 tracking-tighter">{tool_data['title']}</h2>
             <p id="tf-description" class="text-gray-500 text-base max-w-md mx-auto">{tool_data['description']}</p>
         </div>
 
@@ -90,9 +117,9 @@ def build_html(tool_data):
         <div id="tf-form-area" class="space-y-6">
             {fields_html}
             <button id="tf-generate-btn" class="w-full mt-6 bg-gray-900 hover:bg-black text-white font-bold py-4 px-6 rounded-2xl transition-all transform hover:-translate-y-1 active:scale-95 shadow-lg flex justify-center items-center overflow-hidden relative group">
-                <span class="relative z-10">AIで魔法をかける</span>
+                <span class="relative z-10">生成を実行する</span>
                 <div id="tf-loading" class="tf-loader ml-3 hidden relative z-10"></div>
-                <div class="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div class="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-700 opacity-0 group-hover:opacity-100 transition-opacity"></div>
             </button>
         </div>
 
@@ -127,10 +154,10 @@ def build_html(tool_data):
                 <div class="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
                 <div class="relative z-10">
                     <h4 class="text-xl font-bold mb-3 flex items-center">
-                        <span class="bg-blue-500 p-1.5 rounded-lg mr-3 shadow-lg ring-4 ring-blue-500/20">✨</span>
+                        <span class="bg-blue-500 p-1.5 rounded-lg mr-3 shadow-lg ring-4 ring-blue-500/20">📊</span>
                         {tool_data['affiliateTitle']}
                     </h4>
-                    <p class="text-gray-400 text-sm mb-6 leading-relaxed italic">{tool_data['affiliateText']}</p>
+                    <p class="text-gray-400 text-sm mb-6 leading-relaxed">{tool_data['affiliateText']}</p>
                     <a href="#affiliate" target="_blank" class="block w-full text-center bg-white text-gray-900 hover:bg-blue-50 font-black py-4 px-6 rounded-2xl transition-all shadow-xl group">
                         {tool_data['affiliateButton']} 
                         <span class="inline-block transition-transform group-hover:translate-x-1 ml-1">→</span>
@@ -161,7 +188,7 @@ def build_js(tool_data):
     for field in tool_data['fields']:
         user_prompt_js = user_prompt_js.replace("{" + field['id'] + "}", f"${{val_{field['id']}}}")
 
-    js_template = f"""document.addEventListener('DOMContentLoaded', () => {{
+    js_template = f"""(() => {{
     const generateBtn = document.getElementById('tf-generate-btn');
     const loadingIcon = document.getElementById('tf-loading');
     const btnText = generateBtn.querySelector('span');
@@ -169,9 +196,7 @@ def build_js(tool_data):
     const outputArea = document.getElementById('tf-output');
     const errorArea = document.getElementById('tf-error-area');
     const copyBtn = document.getElementById('tf-copy-btn');
-
-    // 本番環境ではCloudflare WorkerのURLに変更
-    const WORKER_URL = "http://127.0.0.1:8787"; 
+    const WORKER_URL = "{WORKER_URL}"; 
 
     generateBtn.addEventListener('click', async () => {{
         resultArea.classList.add('hidden');
@@ -183,7 +208,7 @@ def build_js(tool_data):
         const userPrompt = `{user_prompt_js}`;
 
         loadingIcon.classList.remove('hidden');
-        btnText.textContent = 'AIが生成中...';
+        btnText.textContent = '生成中...';
         generateBtn.disabled = true;
         generateBtn.classList.add('opacity-75', 'cursor-not-allowed');
 
@@ -207,7 +232,7 @@ def build_js(tool_data):
             errorArea.textContent = `エラーが発生しました: ${{error.message}}`;
         }} finally {{
             loadingIcon.classList.add('hidden');
-            btnText.textContent = 'AIで生成する';
+            btnText.textContent = 'AIで生成を実行';
             generateBtn.disabled = false;
             generateBtn.classList.remove('opacity-75', 'cursor-not-allowed');
         }}
@@ -227,7 +252,7 @@ def build_js(tool_data):
             }}, 2000);
         }} catch (err) {{ alert('コピーに失敗しました。'); }}
     }});
-}});"""
+}})();"""
     return js_template
 
 def main():
@@ -250,6 +275,10 @@ def main():
             
         print("✅ Successfully generated tool files in 'output' directory!")
 
+        # Combine HTML and JS for WordPress embedding
+        js_minified = js_content.replace('\n', ' ').replace('\r', '')
+        full_content = f"{html_content}\n\n<script>{js_minified}</script>"
+
         # Send to Make.com Webhook if configured
         webhook_url = os.environ.get("MAKE_WEBHOOK_URL")
         if webhook_url:
@@ -257,8 +286,7 @@ def main():
             payload = {
                 "title": tool_data['title'],
                 "description": tool_data['description'],
-                "htmlContent": html_content,
-                "jsContent": js_content,
+                "htmlContent": full_content,
                 "affiliateTitle": tool_data['affiliateTitle']
             }
             response = requests.post(webhook_url, json=payload)
