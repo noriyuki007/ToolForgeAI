@@ -91,6 +91,8 @@ def build_html(tool_data):
     html_template = f"""
 <!-- Tailwind CSS (必須) -->
 <script src="https://cdn.tailwindcss.com"></script>
+<!-- Marked.js for Markdown parsing -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <!-- Google Fonts: Noto Sans JP -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
 
@@ -101,6 +103,47 @@ def build_html(tool_data):
     }}
     * {{
         font-style: normal !important;
+    }}
+    /* Custom Markdown Styles for Professional Reports */
+    .markdown-body h1, .markdown-body h2, .markdown-body h3 {{
+        color: #111827;
+        font-weight: 700;
+        margin-top: 1.5em;
+        margin-bottom: 0.75em;
+        line-height: 1.3;
+    }}
+    .markdown-body h1 {{ font-size: 1.5rem; border-bottom: 2px solid #E5E7EB; padding-bottom: 0.3em; }}
+    .markdown-body h2 {{ font-size: 1.25rem; border-bottom: 1px solid #E5E7EB; padding-bottom: 0.3em; }}
+    .markdown-body h3 {{ font-size: 1.125rem; }}
+    .markdown-body p {{ margin-bottom: 1em; color: #374151; line-height: 1.6; }}
+    .markdown-body ul, .markdown-body ol {{
+        margin-bottom: 1em;
+        padding-left: 1.5em;
+        color: #374151;
+    }}
+    .markdown-body ul {{ list-style-type: disc; }}
+    .markdown-body ol {{ list-style-type: decimal; }}
+    .markdown-body li {{ margin-bottom: 0.25em; }}
+    .markdown-body table {{
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 1.5em;
+        font-size: 0.875rem;
+    }}
+    .markdown-body th, .markdown-body td {{
+        border: 1px solid #D1D5DB;
+        padding: 0.75rem;
+        text-align: left;
+    }}
+    .markdown-body th {{ background-color: #F3F4F6; font-weight: 700; color: #111827; }}
+    .markdown-body strong {{ font-weight: 700; color: #111827; }}
+    .markdown-body blockquote {{
+        border-left: 4px solid #3B82F6;
+        padding-left: 1em;
+        color: #6B7280;
+        background-color: #EFF6FF;
+        padding: 0.5em 1em;
+        border-radius: 0 0.5rem 0.5rem 0;
     }}
 </style>
 
@@ -140,7 +183,7 @@ def build_html(tool_data):
             <div class="relative">
                 <div class="absolute -inset-1 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl opacity-10 blur-sm"></div>
                 <div class="relative bg-gray-50 p-6 rounded-2xl border border-gray-100 min-h-[150px]">
-                    <pre id="tf-output" class="whitespace-pre-wrap text-gray-700 font-sans text-base leading-relaxed"></pre>
+                    <div id="tf-output" class="markdown-body text-base leading-relaxed"></div>
                 </div>
             </div>
             
@@ -197,6 +240,7 @@ def build_js(tool_data):
     const errorArea = document.getElementById('tf-error-area');
     const copyBtn = document.getElementById('tf-copy-btn');
     const WORKER_URL = "{WORKER_URL}"; 
+    let lastGeneratedText = "";
 
     generateBtn.addEventListener('click', async () => {{
         resultArea.classList.add('hidden');
@@ -222,7 +266,8 @@ def build_js(tool_data):
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'Network error');
 
-            outputArea.textContent = data.result;
+            lastGeneratedText = data.result;
+            outputArea.innerHTML = marked.parse(data.result);
             resultArea.classList.remove('hidden');
             resultArea.scrollIntoView({{ behavior: 'smooth', block: 'nearest' }});
 
@@ -240,7 +285,7 @@ def build_js(tool_data):
 
     copyBtn.addEventListener('click', async () => {{
         try {{
-            await navigator.clipboard.writeText(outputArea.textContent);
+            await navigator.clipboard.writeText(lastGeneratedText);
             const originalText = copyBtn.textContent;
             copyBtn.textContent = 'コピーしました！ ✓';
             copyBtn.classList.add('bg-green-600', 'hover:bg-green-700');
