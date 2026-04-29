@@ -264,6 +264,7 @@ def main():
         html_content = build_html(tool_data)
         js_content = build_js(tool_data)
         
+        os.makedirs("output", exist_ok=True)
         with open("output/index.html", "w", encoding="utf-8") as f:
             f.write(html_content)
         
