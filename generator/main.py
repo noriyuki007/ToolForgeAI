@@ -31,7 +31,9 @@ def generate_tool_concept():
     2. ツールの入力フォーム（fields）は、必ず「3つから4つ」設けてください。
     3. 入力フォームのうち、少なくとも1つは必ず「type: select」にし、専門的な選択肢を4つ以上用意してください。
     4. 「systemPrompt」には、AIの最終出力結果が「Markdown形式（マークダウンのテーブル、見出し、箇条書き）を用いて、非常に構造的かつプロフェッショナルな見た目になるよう」明確に指示を含めてください。
+       また、出力結果の最後に必ず「### 次のステップ：推奨されるアクション」という見出しを作り、課題解決のために外部の専門サービス（アフィリエイト案件に該当するもの）を導入・活用すべきであるという、非常に論理的で説得力のある提案（数百文字）を自然な文脈で組み込むように指示してください。
     5. 出力は必ず「ビジネス・プロフェッショナル」な語彙を使用し、「魔法」「驚異的」「一瞬で」などの誇張表現やカジュアルな言葉は一切排除してください。
+    6. ツールの下部に表示する「SEO対策用の長文解説記事（seoArticle）」を作成してください。ツールのテーマに関連する専門的な知見、業界の課題、解決策などを、HTMLタグ（<h2>, <h3>, <p>, <ul>など）を使って美しくマークアップした状態で2000文字程度で記述してください。
 
     以下のJSONフォーマットで厳密に出力してください。他のテキストは一切含めないでください。
 
@@ -47,11 +49,12 @@ def generate_tool_concept():
                 "options": ["選択肢1", "選択肢2", "選択肢3", "選択肢4"]
             }
         ],
-        "systemPrompt": "OpenAI APIに渡すSystem Prompt。ビジネス実務に即した正確で論理的な回答を、【Markdownの表や見出しを用いた美しい構造】で出力するように強力に指示してください。",
+        "systemPrompt": "OpenAI APIに渡すSystem Prompt。ビジネス実務に即した正確で論理的な回答を、【Markdownの表や見出しを用いた美しい構造】で出力するように強力に指示してください。また、末尾の「### 次のステップ」にて、診断結果を踏まえた上で、外部サービス（転職エージェントやSaaS等）の活用を強く推奨するコンサルティング・アドバイスを記述させてください。",
         "userPromptTemplate": "ユーザーの入力をプロンプトに埋め込むテンプレート。例: 以下の条件でリスク診断をMarkdown形式で作成してください。\\n契約種別: {input1}\\n懸念事項: {input2}",
         "affiliateTitle": "アフィリエイトエリアのキャッチコピー（例：より高度な契約法務サポートをお求めの方へ）",
         "affiliateText": "アフィリエイトエリアの説明文（例：ツールの診断結果をもとに、さらに万全な体制を構築するため、フリーランス特化型の専門エージェントや法務SaaSの活用をご検討ください。）",
-        "affiliateButton": "ボタンのテキスト（例：推奨サービスを確認する）"
+        "affiliateButton": "ボタンのテキスト（例：推奨サービスを確認する）",
+        "seoArticle": "<h2>ツールが解決する課題とは？</h2><p>フリーランスが直面する契約トラブルの多くは...</p><h3>導入のメリット</h3><ul><li>...</li></ul>（※HTMLタグを使って構造化された2000文字程度の専門的なSEO記事）"
     }
     """
 
@@ -209,6 +212,13 @@ def build_html(tool_data):
             </div>
         </div>
     </div>
+</div>
+
+<!-- SEO Article Section -->
+<div class="max-w-2xl mx-auto mt-12 mb-20 px-4 md:px-0">
+    <article class="prose prose-slate max-w-none markdown-body bg-white p-8 md:p-12 rounded-3xl shadow-sm border border-slate-100">
+        {tool_data.get('seoArticle', '')}
+    </article>
 </div>
 <style>
     .tf-loader {{ border: 2px solid rgba(255,255,255,0.3); border-top: 2px solid white; border-radius: 50%; width: 18px; height: 18px; animation: tf-spin 0.8s linear infinite; }}
