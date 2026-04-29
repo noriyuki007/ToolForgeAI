@@ -276,7 +276,6 @@
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = tool.excerpt.rendered;
                 let excerpt = tempDiv.textContent || tempDiv.innerText || '';
-                excerpt = excerpt.length > 80 ? excerpt.substring(0, 80) + '...' : excerpt;
 
                 const category = getCategoryByTool(tool);
                 const iconPath = categoryIcons[category] || categoryIcons.default;
