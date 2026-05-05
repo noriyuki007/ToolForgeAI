@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ToolForge AI | 広告管理画面</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans JP', sans-serif; background-color: #f8fafc; }
+    </style>
+</head>
+<body class="p-8 md:p-12">
+    <div class="max-w-4xl mx-auto bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
+        <h1 class="text-3xl font-black text-slate-900 mb-2">広告管理システム</h1>
+        <p class="text-slate-500 mb-8 font-medium">ツール画面に表示されるアフィリエイト広告をJSON形式で管理します。</p>
+
+        <!-- Login Section -->
+        <div class="bg-slate-50 p-6 rounded-2xl mb-8 border border-slate-100 flex items-end space-x-4">
+            <div class="flex-1">
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">管理者パスワード</label>
+                <input type="password" id="admin-password" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none" placeholder="Cloudflareに設定したパスワードを入力">
+            </div>
+            <button id="load-btn" class="px-6 py-3 bg-slate-900 hover:bg-black text-white font-bold rounded-xl transition-all">
+                読み込み
+            </button>
+        </div>
+
+        <!-- Editor Section -->
+        <div id="editor-section" class="hidden">
+            <div class="mb-4 flex justify-between items-end">
+                <label class="block text-sm font-bold text-slate-900">広告データ（JSON）</label>
+                <button id="format-btn" class="text-xs font-bold text-blue-600 hover:text-blue-800">綺麗にフォーマットする</button>
+            </div>
+            <textarea id="json-editor" class="w-full h-[500px] font-mono text-sm p-6 bg-slate-900 text-green-400 rounded-2xl outline-none focus:ring-4 focus:ring-slate-900/20 shadow-inner resize-y leading-relaxed mb-6" spellcheck="false"></textarea>
+            
+            <div id="status-message" class="hidden mb-6 p-4 rounded-xl text-sm font-bold text-center"></div>
+
+            <button id="save-btn" class="w-full px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white font-black text-lg rounded-2xl transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-1">
+                変更を保存して本番に反映する
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const WORKER_URL = "https://toolforge-api.audiotistic007.workers.dev";
+        
+        const pwdInput = document.getElementById('admin-password');
+        const loadBtn = document.getElementById('load-btn');
+        const saveBtn = document.getElementById('save-btn');
+        const formatBtn = document.getElementById('format-btn');
+        const editor = document.getElementById('json-editor');
+        const editorSection = document.getElementById('editor-section');
+        const statusMsg = document.getElementById('status-message');
+
+        function showMessage(msg, isError = false) {
+            statusMsg.textContent = msg;
+            statusMsg.className = `mb-6 p-4 rounded-xl text-sm font-bold text-center ${isError ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-green-50 text-green-600 border border-green-100'}`;
+            statusMsg.classList.remove('hidden');
+        }
+
+        loadBtn.addEventListener('click', async () => {
+            const pwd = pwdInput.value;
+            if (!pwd) { alert("パスワードを入力してください"); return; }
+            
+            loadBtn.textContent = "読み込み中...";
+            try {
+                // To fetch ads safely, the GET doesn't strictly need a password in our current worker setup,
+                // but we will test the worker connectivity.
+                const res = await fetch(`${WORKER_URL}/ads`);
+                if (!res.ok) throw new Error("データの取得に失敗しました");
+                const data = await res.json();
+                
+                editor.value = JSON.stringify(data, null, 4);
+                editorSection.classList.remove('hidden');
+                statusMsg.classList.add('hidden');
+            } catch (err) {
+                alert(err.message);
+            } finally {
+                loadBtn.textContent = "読み込み";
+            }
+        });
+
+        formatBtn.addEventListener('click', () => {
+            try {
+                const parsed = JSON.parse(editor.value);
+                editor.value = JSON.stringify(parsed, null, 4);
+            } catch (e) {
+                alert("JSONの構文エラーがあります: " + e.message);
+            }
+        });
+
+        saveBtn.addEventListener('click', async () => {
+            const pwd = pwdInput.value;
+            let payload;
+            try {
+                payload = JSON.parse(editor.value);
+            } catch (e) {
+                showMessage("JSONの構文エラーがあります。保存できません。", true);
+                return;
+            }
+
+            saveBtn.textContent = "保存中...";
+            try {
+                const res = await fetch(`${WORKER_URL}/ads`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Password': pwd
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (res.status === 401) throw new Error("パスワードが間違っています");
+                if (!res.ok) throw new Error("保存に失敗しました");
+                
+                showMessage("✅ 保存が完了しました！サイトに即座に反映されました。");
+            } catch (err) {
+                showMessage(err.message, true);
+            } finally {
+                saveBtn.textContent = "変更を保存して本番に反映する";
+            }
+        });
+    </script>
+</body>
+</html>

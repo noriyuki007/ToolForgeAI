@@ -9,3 +9,7 @@ compatibility_date = "2026-04-27"
 # Put allowed origins here, e.g., "https://your-wordpress-domain.com"
 # For development, we can allow * or localhost
 ALLOWED_ORIGIN = "*"
+
+[[kv_namespaces]]
+binding = "TF_ADS_KV"
+id = "put_your_kv_id_here"

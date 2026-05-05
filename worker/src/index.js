@@ -11,6 +11,45 @@ export default {
       return new Response(null, { headers: corsHeaders });
     }
 
+    const url = new URL(request.url);
+
+    // ==========================================
+    // Endpoint: /ads (Ad Management API)
+    // ==========================================
+    if (url.pathname === "/ads" || url.pathname === "/ads/") {
+      // GET: Fetch ads from KV
+      if (request.method === "GET") {
+        try {
+          const adsJson = await env.TF_ADS_KV.get("recommendations");
+          const ads = adsJson ? JSON.parse(adsJson) : { hr: [], saas: [], finance: [], marketing: [], general: [] };
+          return new Response(JSON.stringify(ads), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        } catch (e) {
+          return new Response(JSON.stringify({ error: "Failed to fetch ads" }), { status: 500, headers: corsHeaders });
+        }
+      }
+      
+      // POST: Save ads to KV (Requires Admin Password)
+      if (request.method === "POST") {
+        const password = request.headers.get("X-Admin-Password");
+        if (!password || password !== env.ADMIN_PASSWORD) {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
+        }
+        
+        try {
+          const body = await request.json();
+          await env.TF_ADS_KV.put("recommendations", JSON.stringify(body));
+          return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        } catch (e) {
+          return new Response(JSON.stringify({ error: "Failed to save ads" }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      return new Response("Method not allowed", { status: 405, headers: corsHeaders });
+    }
+
+    // ==========================================
+    // Endpoint: / (OpenAI Wrapper)
+    // ==========================================
     if (request.method !== "POST") {
       return new Response("Method not allowed", { status: 405, headers: corsHeaders });
     }
@@ -34,7 +73,7 @@ export default {
           "Authorization": `Bearer ${env.OPENAI_API_KEY}`
         },
         body: JSON.stringify({
-          model: "gpt-4o-mini", // Using mini for speed and low cost, can be upgraded
+          model: "gpt-4o-mini",
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt }

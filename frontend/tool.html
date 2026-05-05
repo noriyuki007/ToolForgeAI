@@ -195,8 +195,8 @@
             if (!container) return; // If container is not present, skip
             
             try {
-                // Fetch the master data (recommendations.json)
-                const res = await fetch('recommendations.json');
+                // Fetch the master data from Cloudflare Worker API
+                const res = await fetch('https://toolforge-api.audiotistic007.workers.dev/ads');
                 if (!res.ok) return;
                 const adsData = await res.json();
                 
