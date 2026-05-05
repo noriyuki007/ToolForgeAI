@@ -139,6 +139,7 @@
                 }
 
                 loadRelatedTools(id);
+                loadRecommendationAd();
 
             } catch (error) {
                 console.error(error);
@@ -186,6 +187,51 @@
                 }
             } catch (e) {
                 console.error("Failed to load related tools", e);
+            }
+        }
+
+        async function loadRecommendationAd() {
+            const container = document.getElementById('tf-recommendation-container');
+            if (!container) return; // If container is not present, skip
+            
+            try {
+                // Fetch the master data (recommendations.json)
+                const res = await fetch('recommendations.json');
+                if (!res.ok) return;
+                const adsData = await res.json();
+                
+                // Read the category assigned by the AI generator
+                const category = container.getAttribute('data-category') || 'general';
+                
+                // Get the list of ads for this category, fallback to general if empty/not found
+                let ads = adsData[category];
+                if (!ads || ads.length === 0) {
+                    ads = adsData['general'];
+                }
+                if (!ads || ads.length === 0) return; // No ads available
+                
+                // Randomly select one ad
+                const ad = ads[Math.floor(Math.random() * ads.length)];
+                
+                // Inject the premium UI
+                container.innerHTML = `
+                    <div class="mt-12 overflow-hidden relative p-8 bg-gray-900 rounded-3xl text-white shadow-2xl fade-in">
+                        <div class="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
+                        <div class="relative z-10">
+                            <h4 class="text-xl font-bold mb-3 flex items-center">
+                                <span class="bg-blue-500 p-1.5 rounded-lg mr-3 shadow-lg ring-4 ring-blue-500/20">📊</span>
+                                ${ad.title}
+                            </h4>
+                            <p class="text-gray-400 text-sm mb-6 leading-relaxed">${ad.text}</p>
+                            <a href="${ad.url}" target="_blank" onclick="gtag('event', 'click_recommendation', { ad_id: '${ad.id}' });" class="block w-full text-center bg-white text-gray-900 hover:bg-blue-50 font-black py-4 px-6 rounded-2xl transition-all shadow-xl group">
+                                ${ad.button} 
+                                <span class="inline-block transition-transform group-hover:translate-x-1 ml-1">→</span>
+                            </a>
+                        </div>
+                    </div>
+                `;
+            } catch (err) {
+                console.error('Failed to load recommendation ad', err);
             }
         }
 

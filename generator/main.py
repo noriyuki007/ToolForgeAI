@@ -51,9 +51,7 @@ def generate_tool_concept():
         ],
         "systemPrompt": "OpenAI APIに渡すSystem Prompt。ビジネス実務に即した正確で論理的な回答を、【Markdownの表や見出しを用いた美しい構造】で出力するように強力に指示してください。また、末尾の「### 次のステップ」にて、診断結果を踏まえた上で、外部サービス（転職エージェントやSaaS等）の活用を強く推奨するコンサルティング・アドバイスを記述させてください。",
         "userPromptTemplate": "ユーザーの入力をプロンプトに埋め込むテンプレート。例: 以下の条件でリスク診断をMarkdown形式で作成してください。\\n契約種別: {input1}\\n懸念事項: {input2}",
-        "affiliateTitle": "アフィリエイトエリアのキャッチコピー（例：より高度な契約法務サポートをお求めの方へ）",
-        "affiliateText": "アフィリエイトエリアの説明文（例：ツールの診断結果をもとに、さらに万全な体制を構築するため、フリーランス特化型の専門エージェントや法務SaaSの活用をご検討ください。）",
-        "affiliateButton": "ボタンのテキスト（例：推奨サービスを確認する）",
+        "adCategory": "hr, saas, finance, marketing, general のいずれかから、このツールに最も関連するカテゴリを1つ選んでください。",
         "seoArticle": "<h2>ツールが解決する課題とは？</h2><p>フリーランスが直面する契約トラブルの多くは...</p><h3>導入のメリット</h3><ul><li>...</li></ul>（※HTMLタグを使って構造化された2000文字程度の専門的なSEO記事）"
     }
     """
@@ -209,21 +207,8 @@ def build_html(tool_data):
                 </button>
             </div>
 
-            <!-- Affiliate Section -->
-            <div class="mt-12 overflow-hidden relative p-8 bg-gray-900 rounded-3xl text-white shadow-2xl">
-                <div class="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
-                <div class="relative z-10">
-                    <h4 class="text-xl font-bold mb-3 flex items-center">
-                        <span class="bg-blue-500 p-1.5 rounded-lg mr-3 shadow-lg ring-4 ring-blue-500/20">📊</span>
-                        {tool_data['affiliateTitle']}
-                    </h4>
-                    <p class="text-gray-400 text-sm mb-6 leading-relaxed">{tool_data['affiliateText']}</p>
-                    <a href="#affiliate" target="_blank" class="block w-full text-center bg-white text-gray-900 hover:bg-blue-50 font-black py-4 px-6 rounded-2xl transition-all shadow-xl group">
-                        {tool_data['affiliateButton']} 
-                        <span class="inline-block transition-transform group-hover:translate-x-1 ml-1">→</span>
-                    </a>
-                </div>
-            </div>
+            <!-- Dynamic Recommendation Container (Ad Management System) -->
+            <div id="tf-recommendation-container" data-category="{tool_data.get('adCategory', 'general')}"></div>
         </div>
     </div>
 </div>
@@ -376,8 +361,7 @@ def main():
             payload = {
                 "title": tool_data['title'],
                 "description": tool_data['description'],
-                "htmlContent": full_content,
-                "affiliateTitle": tool_data['affiliateTitle']
+                "htmlContent": full_content
             }
             response = requests.post(webhook_url, json=payload)
             if response.status_code == 200:
