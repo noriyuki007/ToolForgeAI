@@ -8,37 +8,52 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Noto Sans JP', sans-serif; background-color: #f8fafc; }
+        .tab-active { border-bottom: 2px solid #2563eb; color: #1e3a8a; background-color: #eff6ff; }
+        .tab-inactive { color: #64748b; }
+        .tab-inactive:hover { background-color: #f1f5f9; }
     </style>
 </head>
-<body class="p-8 md:p-12">
-    <div class="max-w-4xl mx-auto bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
+<body class="p-4 md:p-12">
+    <div class="max-w-5xl mx-auto bg-white p-6 md:p-10 rounded-3xl shadow-sm border border-slate-200">
         <h1 class="text-3xl font-black text-slate-900 mb-2">広告管理システム</h1>
-        <p class="text-slate-500 mb-8 font-medium">ツール画面に表示されるアフィリエイト広告をJSON形式で管理します。</p>
+        <p class="text-slate-500 mb-8 font-medium">ツール画面に表示されるアフィリエイト広告をカテゴリごとに直感的に管理できます。</p>
 
         <!-- Login Section -->
-        <div class="bg-slate-50 p-6 rounded-2xl mb-8 border border-slate-100 flex items-end space-x-4">
-            <div class="flex-1">
+        <div class="bg-slate-50 p-6 rounded-2xl mb-8 border border-slate-100 flex flex-col md:flex-row items-end gap-4">
+            <div class="flex-1 w-full">
                 <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">管理者パスワード</label>
                 <input type="password" id="admin-password" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none" placeholder="Cloudflareに設定したパスワードを入力">
             </div>
-            <button id="load-btn" class="px-6 py-3 bg-slate-900 hover:bg-black text-white font-bold rounded-xl transition-all">
-                読み込み
+            <button id="load-btn" class="w-full md:w-auto px-8 py-3 bg-slate-900 hover:bg-black text-white font-bold rounded-xl transition-all">
+                データを読み込む
             </button>
         </div>
 
+        <!-- Status Message -->
+        <div id="status-message" class="hidden mb-6 p-4 rounded-xl text-sm font-bold text-center transition-all"></div>
+
         <!-- Editor Section -->
         <div id="editor-section" class="hidden">
-            <div class="mb-4 flex justify-between items-end">
-                <label class="block text-sm font-bold text-slate-900">広告データ（JSON）</label>
-                <button id="format-btn" class="text-xs font-bold text-blue-600 hover:text-blue-800">綺麗にフォーマットする</button>
+            <!-- Category Tabs -->
+            <div class="flex flex-wrap border-b border-slate-200 mb-8" id="category-tabs">
+                <!-- Tabs will be injected here -->
             </div>
-            <textarea id="json-editor" class="w-full h-[500px] font-mono text-sm p-6 bg-slate-900 text-green-400 rounded-2xl outline-none focus:ring-4 focus:ring-slate-900/20 shadow-inner resize-y leading-relaxed mb-6" spellcheck="false"></textarea>
             
-            <div id="status-message" class="hidden mb-6 p-4 rounded-xl text-sm font-bold text-center"></div>
-
-            <button id="save-btn" class="w-full px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white font-black text-lg rounded-2xl transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-1">
-                変更を保存して本番に反映する
+            <!-- Ads List Container -->
+            <div id="ads-container" class="space-y-6 mb-8">
+                <!-- Ad cards will be injected here -->
+            </div>
+            
+            <button id="add-ad-btn" class="w-full py-4 border-2 border-dashed border-slate-300 text-slate-500 hover:text-blue-600 hover:border-blue-300 rounded-2xl hover:bg-blue-50 font-bold mb-12 transition-colors flex items-center justify-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                このカテゴリに新しい広告を追加
             </button>
+
+            <div class="border-t border-slate-100 pt-8 flex justify-end">
+                <button id="save-btn" class="w-full md:w-auto px-10 py-4 bg-blue-600 hover:bg-blue-700 text-white font-black text-lg rounded-2xl transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-1">
+                    変更を保存して本番に反映する
+                </button>
+            </div>
         </div>
     </div>
 
@@ -48,16 +63,148 @@
         const pwdInput = document.getElementById('admin-password');
         const loadBtn = document.getElementById('load-btn');
         const saveBtn = document.getElementById('save-btn');
-        const formatBtn = document.getElementById('format-btn');
-        const editor = document.getElementById('json-editor');
+        const addAdBtn = document.getElementById('add-ad-btn');
         const editorSection = document.getElementById('editor-section');
         const statusMsg = document.getElementById('status-message');
+        const tabsContainer = document.getElementById('category-tabs');
+        const adsContainer = document.getElementById('ads-container');
+
+        const CATEGORIES = [
+            { id: 'hr', name: '人材・転職 (hr)' },
+            { id: 'saas', name: '業務ツール (saas)' },
+            { id: 'finance', name: '金融・カード (finance)' },
+            { id: 'marketing', name: '集客・Web (marketing)' },
+            { id: 'general', name: 'その他共通 (general)' }
+        ];
+
+        let adsData = {};
+        let currentCategory = 'hr';
 
         function showMessage(msg, isError = false) {
             statusMsg.textContent = msg;
             statusMsg.className = `mb-6 p-4 rounded-xl text-sm font-bold text-center ${isError ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-green-50 text-green-600 border border-green-100'}`;
             statusMsg.classList.remove('hidden');
+            setTimeout(() => statusMsg.classList.add('hidden'), 5000);
         }
+
+        function initDataStructure(data) {
+            CATEGORIES.forEach(cat => {
+                if (!data[cat.id]) data[cat.id] = [];
+            });
+            return data;
+        }
+
+        function renderTabs() {
+            tabsContainer.innerHTML = '';
+            CATEGORIES.forEach(cat => {
+                const btn = document.createElement('button');
+                btn.className = `px-6 py-3 font-bold text-sm rounded-t-lg transition-colors ${currentCategory === cat.id ? 'tab-active' : 'tab-inactive'}`;
+                btn.textContent = cat.name;
+                btn.onclick = () => {
+                    syncCurrentAds(); // Save current edits to state before switching
+                    currentCategory = cat.id;
+                    renderTabs();
+                    renderAds();
+                };
+                tabsContainer.appendChild(btn);
+            });
+        }
+
+        function renderAds() {
+            adsContainer.innerHTML = '';
+            const ads = adsData[currentCategory] || [];
+            
+            if (ads.length === 0) {
+                adsContainer.innerHTML = `
+                    <div class="text-center py-10 bg-slate-50 rounded-2xl border border-slate-100">
+                        <p class="text-slate-400 font-bold mb-2">このカテゴリには広告が登録されていません</p>
+                        <p class="text-slate-400 text-sm">下の「新しい広告を追加」ボタンから追加してください。</p>
+                    </div>
+                `;
+                return;
+            }
+
+            ads.forEach((ad, index) => {
+                const card = document.createElement('div');
+                card.className = "p-6 bg-slate-50 rounded-2xl border border-slate-200 relative group ad-card";
+                card.dataset.index = index;
+                
+                card.innerHTML = `
+                    <div class="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button class="delete-btn text-red-500 hover:bg-red-50 p-2 rounded-lg font-bold text-sm transition-colors flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            削除
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">広告の見出し（タイトル）</label>
+                            <input type="text" class="ad-title w-full px-4 py-2 bg-white border border-slate-200 rounded-lg outline-none focus:border-blue-500" value="${ad.title || ''}" placeholder="例：ハイクラス転職ならビズリーチ">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">管理用ID (英数字のみ・被り不可)</label>
+                            <input type="text" class="ad-id w-full px-4 py-2 bg-white border border-slate-200 rounded-lg outline-none focus:border-blue-500" value="${ad.id || ''}" placeholder="例：bizreach_01">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-xs font-bold text-slate-500 mb-1">説明文</label>
+                        <textarea class="ad-text w-full px-4 py-2 bg-white border border-slate-200 rounded-lg outline-none focus:border-blue-500 h-20 resize-y" placeholder="ツールの下部に表示される説得力のある説明文">${ad.text || ''}</textarea>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">アフィリエイトURL (リンク先)</label>
+                            <input type="text" class="ad-url w-full px-4 py-2 bg-white border border-slate-200 rounded-lg outline-none focus:border-blue-500 font-mono text-sm" value="${ad.url || ''}" placeholder="https://px.a8.net/...">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">ボタンのテキスト</label>
+                            <input type="text" class="ad-button w-full px-4 py-2 bg-white border border-slate-200 rounded-lg outline-none focus:border-blue-500" value="${ad.button || ''}" placeholder="例：無料登録してスカウトを待つ">
+                        </div>
+                    </div>
+                `;
+
+                card.querySelector('.delete-btn').onclick = () => {
+                    if (confirm("この広告を削除しますか？")) {
+                        syncCurrentAds();
+                        adsData[currentCategory].splice(index, 1);
+                        renderAds();
+                    }
+                };
+
+                adsContainer.appendChild(card);
+            });
+        }
+
+        // Reads DOM inputs and saves them back to adsData
+        function syncCurrentAds() {
+            const cards = document.querySelectorAll('.ad-card');
+            const newCategoryData = [];
+            
+            cards.forEach(card => {
+                newCategoryData.push({
+                    id: card.querySelector('.ad-id').value.trim(),
+                    title: card.querySelector('.ad-title').value.trim(),
+                    text: card.querySelector('.ad-text').value.trim(),
+                    url: card.querySelector('.ad-url').value.trim(),
+                    button: card.querySelector('.ad-button').value.trim()
+                });
+            });
+            
+            adsData[currentCategory] = newCategoryData;
+        }
+
+        // Event Listeners
+        addAdBtn.addEventListener('click', () => {
+            syncCurrentAds();
+            adsData[currentCategory].push({ id: `${currentCategory}_new_${Date.now().toString().slice(-4)}`, title: '', text: '', url: '', button: '' });
+            renderAds();
+            // Scroll to bottom
+            setTimeout(() => {
+                adsContainer.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+        });
 
         loadBtn.addEventListener('click', async () => {
             const pwd = pwdInput.value;
@@ -65,38 +212,38 @@
             
             loadBtn.textContent = "読み込み中...";
             try {
-                // To fetch ads safely, the GET doesn't strictly need a password in our current worker setup,
-                // but we will test the worker connectivity.
                 const res = await fetch(`${WORKER_URL}/ads`);
                 if (!res.ok) throw new Error("データの取得に失敗しました");
-                const data = await res.json();
                 
-                editor.value = JSON.stringify(data, null, 4);
+                const data = await res.json();
+                adsData = initDataStructure(data);
+                
+                renderTabs();
+                renderAds();
+                
                 editorSection.classList.remove('hidden');
                 statusMsg.classList.add('hidden');
             } catch (err) {
                 alert(err.message);
             } finally {
-                loadBtn.textContent = "読み込み";
-            }
-        });
-
-        formatBtn.addEventListener('click', () => {
-            try {
-                const parsed = JSON.parse(editor.value);
-                editor.value = JSON.stringify(parsed, null, 4);
-            } catch (e) {
-                alert("JSONの構文エラーがあります: " + e.message);
+                loadBtn.textContent = "データを読み込む";
             }
         });
 
         saveBtn.addEventListener('click', async () => {
             const pwd = pwdInput.value;
-            let payload;
-            try {
-                payload = JSON.parse(editor.value);
-            } catch (e) {
-                showMessage("JSONの構文エラーがあります。保存できません。", true);
+            syncCurrentAds(); // Make sure latest edits are caught
+            
+            // Validation
+            let isValid = true;
+            CATEGORIES.forEach(cat => {
+                adsData[cat.id].forEach(ad => {
+                    if (!ad.id || !ad.title || !ad.url) isValid = false;
+                });
+            });
+            
+            if (!isValid) {
+                alert("エラー：タイトル、ID、URLはすべての広告で必須です。空白のまま保存することはできません。");
                 return;
             }
 
@@ -108,13 +255,14 @@
                         'Content-Type': 'application/json',
                         'X-Admin-Password': pwd
                     },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify(adsData)
                 });
                 
                 if (res.status === 401) throw new Error("パスワードが間違っています");
                 if (!res.ok) throw new Error("保存に失敗しました");
                 
-                showMessage("✅ 保存が完了しました！サイトに即座に反映されました。");
+                showMessage("✅ 広告データが正常に保存され、サイトに即座に反映されました！");
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             } catch (err) {
                 showMessage(err.message, true);
             } finally {
